@@ -27,6 +27,22 @@ class ArgumentsTest {
         assertEquals("TECHNICAL", arguments.folderName());
         assertEquals(Optional.of(Path.of(backup())), arguments.backupDirectory());
         assertEquals(5, arguments.backupsToKeep());
+        assertEquals(Optional.empty(), arguments.pageFavicon());
+    }
+
+    @Test
+    void readsTheOptionalPageFavicon() {
+        Arguments arguments = Arguments.parse(
+                new String[]{bookmarks(), output(), "TECHNICAL", backup(), "5", " /assets/favicon-32.png "});
+
+        assertEquals(Optional.of("/assets/favicon-32.png"), arguments.pageFavicon());
+    }
+
+    @Test
+    void blankPageFaviconMeansNone() {
+        Arguments arguments = Arguments.parse(new String[]{bookmarks(), output(), "TECHNICAL", backup(), "5", " "});
+
+        assertEquals(Optional.empty(), arguments.pageFavicon());
     }
 
     @ParameterizedTest
@@ -81,11 +97,11 @@ class ArgumentsTest {
     }
 
     @Test
-    void everyArgumentIsMandatory() {
+    void theFirstFiveArgumentsAreMandatoryAndAtMostSixAreAccepted() {
         assertThrows(ExportException.class,
                 () -> Arguments.parse(new String[]{bookmarks(), output(), "TECHNICAL", backup()}));
         assertThrows(ExportException.class,
-                () -> Arguments.parse(new String[]{bookmarks(), output(), "TECHNICAL", backup(), "5", "6"}));
+                () -> Arguments.parse(new String[]{bookmarks(), output(), "TECHNICAL", backup(), "5", "icon.png", "7"}));
     }
 
     private Arguments parse(String bookmarks, String output, String folder, String backup, String backupsToKeep) {

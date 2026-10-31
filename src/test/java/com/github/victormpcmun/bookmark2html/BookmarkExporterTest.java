@@ -33,11 +33,13 @@ class BookmarkExporterTest {
         Path backupDirectory = tempDir.resolve("backup");
 
         ExportResult result = exporter().export(
-                new Arguments(TestBookmarks.file(), output, "TECHNICAL", Optional.of(backupDirectory), 5));
+                new Arguments(TestBookmarks.file(), output, "TECHNICAL", Optional.of(backupDirectory), 5, Optional.empty()));
 
         String html = Files.readString(output);
         assertTrue(html.contains("<h1 class=\"page-title\">TECHNICAL</h1>"));
         assertTrue(html.contains("https://docs.oracle.com/en/java/"));
+        assertTrue(html.contains("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+                + "\n<link rel=\"icon\" href=\"/assets/favicon-32.png\">"));
         Path backupFile = result.backupFile().orElseThrow();
         assertEquals(backupDirectory, backupFile.getParent());
         assertTrue(Files.exists(backupFile));
@@ -50,7 +52,8 @@ class BookmarkExporterTest {
         Path oldest = Files.createFile(backupDirectory.resolve("original_bookmarks_20200101_000000.zip"));
         Path older = Files.createFile(backupDirectory.resolve("original_bookmarks_20210101_000000.zip"));
         Arguments arguments = new Arguments(
-                TestBookmarks.file(), tempDir.resolve("out.html"), "TECHNICAL", Optional.of(backupDirectory), 2);
+                TestBookmarks.file(), tempDir.resolve("out.html"), "TECHNICAL", Optional.of(backupDirectory), 2,
+                Optional.empty());
 
         ExportResult result = exporter().export(arguments);
 
@@ -65,7 +68,7 @@ class BookmarkExporterTest {
         Path output = tempDir.resolve("bookmarks.html");
 
         ExportResult result = exporter().export(
-                new Arguments(TestBookmarks.file(), output, "TECHNICAL", Optional.empty(), 0));
+                new Arguments(TestBookmarks.file(), output, "TECHNICAL", Optional.empty(), 0, Optional.empty()));
 
         assertEquals(Optional.empty(), result.backupFile());
         assertEquals(List.of(), result.deletedBackups());
@@ -78,7 +81,7 @@ class BookmarkExporterTest {
         return new BookmarkExporter(
                 new ChromeBookmarkReader(),
                 new FolderFinder(),
-                PrettyHtmlRenderer.withDefaultTemplate(domains -> Map.of()),
+                PrettyHtmlRenderer.withDefaultTemplate(domains -> Map.of(), Optional.of("/assets/favicon-32.png")),
                 new FileOutputWriter(),
                 new ZipBookmarkBackup(Clock.systemDefaultZone()),
                 new BackupRotation());

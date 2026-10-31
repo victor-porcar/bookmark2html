@@ -7,22 +7,24 @@ import java.util.Optional;
 /**
  * Command line arguments: bookmarks file (the first existing one among several candidates), output
  * html file, folder to export, the directory where the bookmarks file is backed up and how many
- * backups are kept there.
+ * backups are kept there, plus optionally the url of the favicon of the generated page.
  * The keyword ALL_EXISTING_BOOKMARKS is turned into an empty folder name, which means every bookmark.
  * Keeping 0 backups means no backup at all: the backup directory is then ignored and left empty here.
+ * A blank page favicon is the same as none.
  */
 public record Arguments(Path bookmarksFile, Path outputFile, String folderName,
-                        Optional<Path> backupDirectory, int backupsToKeep) {
+                        Optional<Path> backupDirectory, int backupsToKeep, Optional<String> pageFavicon) {
 
     static final int NO_BACKUP = 0;
 
     static final String ALL_BOOKMARKS_KEYWORD = "ALL_EXISTING_BOOKMARKS";
     static final String ALL_BOOKMARKS = "";
 
-    private static final int EXPECTED_ARGUMENTS = 5;
+    private static final int MANDATORY_ARGUMENTS = 5;
+    private static final int ALL_ARGUMENTS = 6;
 
     private static final String USAGE = """
-            expected 5 arguments
+            expected 5 arguments, or 6 with the optional last one
               1. Chrome bookmarks file, or several candidates separated by ';' (the first existing one
                  is used); a profile directory stands for the Bookmarks file inside it
               2. Output html file, as a full path
@@ -31,13 +33,15 @@ public record Arguments(Path bookmarksFile, Path outputFile, String folderName,
                  (ignored when 5 is 0)
               5. Number of backups to keep in that directory, counting the new one; older ones are deleted.
                  0 makes no backup at all
+              6. Optional: url of the favicon of the generated page, as written in its html,
+                 for example /assets/favicon-32.png; without it the page has no favicon
             example:
               java -jar bookmark2html.jar \
             "C:\\Chrome\\User Data\\Default\\AccountBookmarks;C:\\Chrome\\User Data\\Default\\Bookmarks" \
-            "D:\\bookmarks\\bookmarks.html" TECHNICAL "D:\\bookmarks\\backup" 5""";
+            "D:\\bookmarks\\bookmarks.html" TECHNICAL "D:\\bookmarks\\backup" 5 favicon.png""";
 
     public static Arguments parse(String[] args) {
-        if (args.length != EXPECTED_ARGUMENTS) {
+        if (args.length != MANDATORY_ARGUMENTS && args.length != ALL_ARGUMENTS) {
             throw new ExportException(USAGE);
         }
         int backupsToKeep = backupsToKeepOf(args[4]);
@@ -46,7 +50,13 @@ public record Arguments(Path bookmarksFile, Path outputFile, String folderName,
                 fullPathOf(args[1], "output html file"),
                 folderNameOf(args[2]),
                 backupDirectoryOf(args[3], backupsToKeep),
-                backupsToKeep);
+                backupsToKeep,
+                args.length == ALL_ARGUMENTS ? pageFaviconOf(args[5]) : Optional.empty());
+    }
+
+    private static Optional<String> pageFaviconOf(String value) {
+        String pageFavicon = value.strip();
+        return pageFavicon.isEmpty() ? Optional.empty() : Optional.of(pageFavicon);
     }
 
     private static Optional<Path> backupDirectoryOf(String value, int backupsToKeep) {

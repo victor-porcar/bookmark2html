@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -76,7 +77,8 @@ class PrettyHtmlRendererTest {
         BookmarkFolder nested = new BookmarkFolder("Root", List.of(new BookmarkFolder("Java", List.of(
                 new BookmarkFolder("Spring Boot", List.of(new BookmarkLink("Guide", "https://spring.io/")))))));
 
-        String html = new PrettyHtmlRenderer(new PageTemplate("{{content}}"), "", FAKE_FAVICONS, FIXED_CLOCK).render(nested);
+        String html = new PrettyHtmlRenderer(new PageTemplate("{{content}}"), "", FAKE_FAVICONS, Optional.empty(),
+                FIXED_CLOCK).render(nested);
 
         assertTrue(html.contains("<li class=\"folder\" id=\"java/spring-boot\">"));
         assertTrue(html.contains("<a class=\"folder-anchor\" href=\"#java/spring-boot\""));
@@ -92,12 +94,27 @@ class PrettyHtmlRendererTest {
 
     @Test
     void embedsTheStylesheet() {
-        String html = new PrettyHtmlRenderer(new PageTemplate("{{style}}"), "body{}", FAKE_FAVICONS, FIXED_CLOCK).render(folder);
+        String html = new PrettyHtmlRenderer(new PageTemplate("{{style}}"), "body{}", FAKE_FAVICONS, Optional.empty(),
+                FIXED_CLOCK).render(folder);
 
         assertEquals("body{}", html);
     }
 
+    @Test
+    void linksThePageFaviconOnTheNextLine() {
+        String html = new PrettyHtmlRenderer(new PageTemplate("<meta>{{pageFavicon}}"), "", FAKE_FAVICONS,
+                Optional.of("icons/a&b.png"), FIXED_CLOCK).render(folder);
+
+        assertEquals("<meta>\n<link rel=\"icon\" href=\"icons/a&amp;b.png\">", html);
+    }
+
+    @Test
+    void leavesThePageWithoutFaviconWhenThereIsNone() {
+        assertEquals("<meta>", render("<meta>{{pageFavicon}}"));
+    }
+
     private String render(String template) {
-        return new PrettyHtmlRenderer(new PageTemplate(template), "", FAKE_FAVICONS, FIXED_CLOCK).render(folder);
+        return new PrettyHtmlRenderer(new PageTemplate(template), "", FAKE_FAVICONS, Optional.empty(), FIXED_CLOCK)
+                .render(folder);
     }
 }

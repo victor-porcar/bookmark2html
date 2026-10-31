@@ -26,7 +26,7 @@ public final class Bookmark2html {
 
     private static void run(Arguments arguments) {
         System.out.printf("Reading Chrome bookmarks from %s%n", arguments.bookmarksFile());
-        ExportResult result = createExporter().export(arguments);
+        ExportResult result = createExporter(arguments).export(arguments);
         System.out.printf("Exported %d bookmarks from folder '%s' into %s%n",
                 result.exportedFolder().countLinks(), result.exportedFolder().name(), arguments.outputFile());
         result.backupFile().ifPresentOrElse(
@@ -36,11 +36,11 @@ public final class Bookmark2html {
                 System.out.printf("Old backup deleted: %s%n", deleted.getFileName()));
     }
 
-    private static BookmarkExporter createExporter() {
+    private static BookmarkExporter createExporter(Arguments arguments) {
         return new BookmarkExporter(
                 new ChromeBookmarkReader(),
                 new FolderFinder(),
-                PrettyHtmlRenderer.withDefaultTemplate(new GoogleFaviconSource()),
+                PrettyHtmlRenderer.withDefaultTemplate(new GoogleFaviconSource(), arguments.pageFavicon()),
                 new FileOutputWriter(),
                 new ZipBookmarkBackup(Clock.systemDefaultZone()),
                 new BackupRotation());
