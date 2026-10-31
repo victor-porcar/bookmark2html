@@ -11,11 +11,12 @@ export anything from the browser first.
 ### Usage
 
 ```
-java -jar dist/bookmark2html.jar <BOOKMARKS_FILES> <OUTPUT_HTML_FILE> <FOLDER_NAME> <BACKUP_DIR> <BACKUPS_TO_KEEP> [<PAGE_FAVICON>]
+java -jar dist/bookmark2html.jar <BOOKMARKS_FILES> <OUTPUT_HTML_FILE> <FOLDER_NAME> <BACKUP_DIR> <BACKUPS_TO_KEEP> [--favicon=<URL>] [--apple-touch-icon=<URL>]
 ```
 
 or the same arguments with the launchers `bookmark2html.cmd` (Windows) / `bookmark2html.sh`
-(Linux, macOS). The first five arguments are mandatory; `PAGE_FAVICON` is optional.
+(Linux, macOS). The five arguments are mandatory and go in that order; the options are optional
+and may go anywhere among them.
 
 - **BOOKMARKS_FILES** is the Chrome bookmarks file, or several candidate files separated by `;`:
   the first one that exists is used, and the program prints which one it read. If none exists
@@ -55,12 +56,19 @@ or the same arguments with the launchers `bookmark2html.cmd` (Windows) / `bookma
     the 5 newest remain. Only files named `original_bookmarks_<yyyyMMdd_HHmmss>.zip` directly
     inside `BACKUP_DIR` are considered, so anything else in that directory is never touched,
     and the backup just made is never deleted.
-- **PAGE_FAVICON** (optional) is the url of the favicon of the generated page, the icon the
-  browser shows in its tab, written exactly as it must appear in the page:
-  `<link rel="icon" href="PAGE_FAVICON">`. It can be absolute (`/assets/favicon-32.png`, for a
-  page published on a site that has that icon), relative to the page (`favicon.png`) or a full
-  url. The image is only linked, not embedded, so it must be reachable from where the page is
-  opened. Without this argument, or when it is blank, the page has no favicon.
+
+Options, for the icons of the generated page itself (not those of its bookmarks):
+
+- **--favicon=URL** is the favicon of the page, the icon the browser shows in its tab:
+  `<link rel="icon" href="URL">`.
+- **--apple-touch-icon=URL** is the icon of the page when it is added to the home screen of a
+  phone: `<link rel="apple-touch-icon" href="URL">`.
+
+`URL` is written into the page exactly as given (only escaped for HTML). It can be absolute
+(`/assets/favicon-32.png`, for a page published on a site that has that icon), relative to the
+page (`favicon.png`) or a full url. The image is only linked, not embedded, so it must be
+reachable from where the page is opened. Without an option the page simply lacks that icon.
+An unknown option, an option without a value or the same option twice stops with an error.
 
 The program prints which bookmarks file it read, what it exported, where the backup went (or
 that no backup was made) and which old backups it deleted, and ends with exit code `0`.
@@ -86,11 +94,14 @@ Export every bookmark without any backup:
 bookmark2html.cmd "C:\Users\me\AppData\Local\Google\Chrome\User Data\Default" "D:\bookmarks\all.html" ALL_EXISTING_BOOKMARKS - 0
 ```
 
-The same, giving the page the favicon `favicon.png` that sits next to it:
+The same, giving the page the icons `favicon.png` and `touch-icon.png` that sit next to it:
 
 ```
-bookmark2html.cmd "C:\Users\me\AppData\Local\Google\Chrome\User Data\Default" "D:\bookmarks\all.html" ALL_EXISTING_BOOKMARKS - 0 favicon.png
+bookmark2html.cmd "C:\Users\me\AppData\Local\Google\Chrome\User Data\Default" "D:\bookmarks\all.html" ALL_EXISTING_BOOKMARKS - 0 --favicon=favicon.png --apple-touch-icon=touch-icon.png
 ```
+
+From Git Bash on Windows, a value starting with `/` (`--favicon=/assets/favicon-32.png`) reaches
+the program turned into a Windows path by Git Bash itself; set `MSYS_NO_PATHCONV=1` to avoid it.
 
 ### The generated page
 
@@ -140,9 +151,9 @@ page are listed there too. Rebuild after editing it.
 For a one-off change, edit the `<style>` block of a generated page directly.
 
 The page skeleton is [`src/main/resources/template.html`](src/main/resources/template.html),
-with the placeholders `{{title}}`, `{{pageFavicon}}`, `{{summary}}`, `{{style}}`, `{{content}}`
-and `{{date}}`. `{{pageFavicon}}` is either empty or a line break followed by the `<link>` of the
-page favicon.
+with the placeholders `{{title}}`, `{{pageIcons}}`, `{{summary}}`, `{{style}}`, `{{content}}`
+and `{{date}}`. `{{pageIcons}}` holds the `<link>` of each icon given with the options, each one
+preceded by a line break, and is empty without them.
 
 ### Build
 
@@ -166,7 +177,7 @@ BookmarkExporter       read -> find folder -> render -> write -> back up -> rota
 reader/                BookmarkReader, ChromeBookmarkReader (Chrome JSON -> model)
 model/                 BookmarkFolder, BookmarkLink
 finder/                FolderFinder
-render/                BookmarkRenderer, PrettyHtmlRenderer, PageTemplate, FolderAnchors
+render/                BookmarkRenderer, PrettyHtmlRenderer, PageTemplate, PageIcons, FolderAnchors
 favicon/               FaviconSource, GoogleFaviconSource
 writer/                OutputWriter, FileOutputWriter
 backup/                BookmarkBackup, ZipBookmarkBackup, BackupRotation, BackupFileName

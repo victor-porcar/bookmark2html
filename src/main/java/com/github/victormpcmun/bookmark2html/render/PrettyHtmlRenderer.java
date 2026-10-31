@@ -13,37 +13,38 @@ import java.util.stream.Collectors;
 
 /**
  * Renders a folder as a complete, self-contained html page: stylesheet and favicons embedded.
- * The favicon of the page itself, when there is one, is only linked by its url.
+ * The icons of the page itself, when there are any, are only linked by their url.
  */
 public class PrettyHtmlRenderer implements BookmarkRenderer {
 
     private static final String TEMPLATE_RESOURCE = "template.html";
     private static final String STYLE_RESOURCE = "style.css";
 
-    /** Placed right after the viewport meta tag, hence the leading line break. */
-    private static final String PAGE_FAVICON = "\n<link rel=\"icon\" href=\"%s\">";
+    /** Each one placed after the previous tag of the head, hence the leading line break. */
+    private static final String FAVICON = "\n<link rel=\"icon\" href=\"%s\">";
+    private static final String APPLE_TOUCH_ICON = "\n<link rel=\"apple-touch-icon\" href=\"%s\">";
 
     private final PageTemplate template;
     private final String style;
     private final FaviconSource faviconSource;
-    private final Optional<String> pageFavicon;
+    private final PageIcons pageIcons;
     private final Clock clock;
 
     public PrettyHtmlRenderer(PageTemplate template, String style, FaviconSource faviconSource,
-                              Optional<String> pageFavicon, Clock clock) {
+                              PageIcons pageIcons, Clock clock) {
         this.template = template;
         this.style = style;
         this.faviconSource = faviconSource;
-        this.pageFavicon = pageFavicon;
+        this.pageIcons = pageIcons;
         this.clock = clock;
     }
 
-    public static PrettyHtmlRenderer withDefaultTemplate(FaviconSource faviconSource, Optional<String> pageFavicon) {
+    public static PrettyHtmlRenderer withDefaultTemplate(FaviconSource faviconSource, PageIcons pageIcons) {
         return new PrettyHtmlRenderer(
                 new PageTemplate(Resources.read(TEMPLATE_RESOURCE)),
                 Resources.read(STYLE_RESOURCE),
                 faviconSource,
-                pageFavicon,
+                pageIcons,
                 Clock.systemDefaultZone());
     }
 
@@ -51,11 +52,15 @@ public class PrettyHtmlRenderer implements BookmarkRenderer {
     public String render(BookmarkFolder folder) {
         return template.fill(Map.of(
                 "title", Html.escape(folder.name()),
-                "pageFavicon", pageFavicon.map(url -> PAGE_FAVICON.formatted(Html.escape(url))).orElse(""),
+                "pageIcons", link(FAVICON, pageIcons.favicon()) + link(APPLE_TOUCH_ICON, pageIcons.appleTouchIcon()),
                 "summary", summary(folder),
                 "style", style,
                 "content", content(folder),
                 "date", LocalDate.now(clock).toString()));
+    }
+
+    private static String link(String format, Optional<String> url) {
+        return url.map(value -> format.formatted(Html.escape(value))).orElse("");
     }
 
     private String content(BookmarkFolder folder) {

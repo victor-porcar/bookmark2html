@@ -1,5 +1,6 @@
 package com.github.victormpcmun.bookmark2html;
 
+import com.github.victormpcmun.bookmark2html.render.PageIcons;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -27,22 +28,52 @@ class ArgumentsTest {
         assertEquals("TECHNICAL", arguments.folderName());
         assertEquals(Optional.of(Path.of(backup())), arguments.backupDirectory());
         assertEquals(5, arguments.backupsToKeep());
-        assertEquals(Optional.empty(), arguments.pageFavicon());
+        assertEquals(PageIcons.none(), arguments.pageIcons());
     }
 
     @Test
-    void readsTheOptionalPageFavicon() {
+    void readsTheIconOptionsAnywhereAmongTheArguments() {
+        Arguments arguments = Arguments.parse(new String[]{"--apple-touch-icon=/assets/touch.png", bookmarks(),
+                output(), "TECHNICAL", "--favicon= /assets/favicon-32.png ", backup(), "5"});
+
+        assertEquals(new PageIcons(Optional.of("/assets/favicon-32.png"), Optional.of("/assets/touch.png")),
+                arguments.pageIcons());
+        assertEquals("TECHNICAL", arguments.folderName());
+        assertEquals(5, arguments.backupsToKeep());
+    }
+
+    @Test
+    void eachIconOptionIsOptional() {
         Arguments arguments = Arguments.parse(
-                new String[]{bookmarks(), output(), "TECHNICAL", backup(), "5", " /assets/favicon-32.png "});
+                new String[]{bookmarks(), output(), "TECHNICAL", backup(), "5", "--favicon=icon.png"});
 
-        assertEquals(Optional.of("/assets/favicon-32.png"), arguments.pageFavicon());
+        assertEquals(new PageIcons(Optional.of("icon.png"), Optional.empty()), arguments.pageIcons());
     }
 
     @Test
-    void blankPageFaviconMeansNone() {
-        Arguments arguments = Arguments.parse(new String[]{bookmarks(), output(), "TECHNICAL", backup(), "5", " "});
+    void unknownOptionIsRejected() {
+        ExportException error = assertThrows(ExportException.class, () -> Arguments.parse(
+                new String[]{bookmarks(), output(), "TECHNICAL", backup(), "5", "--icon=icon.png"}));
 
-        assertEquals(Optional.empty(), arguments.pageFavicon());
+        assertEquals("unknown option '--icon=icon.png'; the options are --favicon=URL, --apple-touch-icon=URL",
+                error.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"--favicon", "--favicon=", "--favicon= "})
+    void optionWithoutValueIsRejected(String option) {
+        ExportException error = assertThrows(ExportException.class, () -> Arguments.parse(
+                new String[]{bookmarks(), output(), "TECHNICAL", backup(), "5", option}));
+
+        assertEquals("option --favicon has no value: write it as --favicon=URL", error.getMessage());
+    }
+
+    @Test
+    void repeatedOptionIsRejected() {
+        ExportException error = assertThrows(ExportException.class, () -> Arguments.parse(
+                new String[]{bookmarks(), output(), "TECHNICAL", backup(), "5", "--favicon=a.png", "--favicon=b.png"}));
+
+        assertEquals("option --favicon is given more than once", error.getMessage());
     }
 
     @ParameterizedTest
@@ -97,11 +128,11 @@ class ArgumentsTest {
     }
 
     @Test
-    void theFirstFiveArgumentsAreMandatoryAndAtMostSixAreAccepted() {
+    void exactlyFiveArgumentsBesidesTheOptions() {
         assertThrows(ExportException.class,
-                () -> Arguments.parse(new String[]{bookmarks(), output(), "TECHNICAL", backup()}));
+                () -> Arguments.parse(new String[]{bookmarks(), output(), "TECHNICAL", backup(), "--favicon=a.png"}));
         assertThrows(ExportException.class,
-                () -> Arguments.parse(new String[]{bookmarks(), output(), "TECHNICAL", backup(), "5", "icon.png", "7"}));
+                () -> Arguments.parse(new String[]{bookmarks(), output(), "TECHNICAL", backup(), "5", "icon.png"}));
     }
 
     private Arguments parse(String bookmarks, String output, String folder, String backup, String backupsToKeep) {

@@ -40,7 +40,7 @@ public final class Bookmark2html {
         return new BookmarkExporter(
                 new ChromeBookmarkReader(),
                 new FolderFinder(),
-                PrettyHtmlRenderer.withDefaultTemplate(new GoogleFaviconSource(), arguments.pageFavicon()),
+                PrettyHtmlRenderer.withDefaultTemplate(new GoogleFaviconSource(), arguments.pageIcons()),
                 new FileOutputWriter(),
                 new ZipBookmarkBackup(Clock.systemDefaultZone()),
                 new BackupRotation());

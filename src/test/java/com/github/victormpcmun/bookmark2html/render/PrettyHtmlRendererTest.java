@@ -77,7 +77,7 @@ class PrettyHtmlRendererTest {
         BookmarkFolder nested = new BookmarkFolder("Root", List.of(new BookmarkFolder("Java", List.of(
                 new BookmarkFolder("Spring Boot", List.of(new BookmarkLink("Guide", "https://spring.io/")))))));
 
-        String html = new PrettyHtmlRenderer(new PageTemplate("{{content}}"), "", FAKE_FAVICONS, Optional.empty(),
+        String html = new PrettyHtmlRenderer(new PageTemplate("{{content}}"), "", FAKE_FAVICONS, PageIcons.none(),
                 FIXED_CLOCK).render(nested);
 
         assertTrue(html.contains("<li class=\"folder\" id=\"java/spring-boot\">"));
@@ -94,27 +94,39 @@ class PrettyHtmlRendererTest {
 
     @Test
     void embedsTheStylesheet() {
-        String html = new PrettyHtmlRenderer(new PageTemplate("{{style}}"), "body{}", FAKE_FAVICONS, Optional.empty(),
+        String html = new PrettyHtmlRenderer(new PageTemplate("{{style}}"), "body{}", FAKE_FAVICONS, PageIcons.none(),
                 FIXED_CLOCK).render(folder);
 
         assertEquals("body{}", html);
     }
 
     @Test
-    void linksThePageFaviconOnTheNextLine() {
-        String html = new PrettyHtmlRenderer(new PageTemplate("<meta>{{pageFavicon}}"), "", FAKE_FAVICONS,
-                Optional.of("icons/a&b.png"), FIXED_CLOCK).render(folder);
-
-        assertEquals("<meta>\n<link rel=\"icon\" href=\"icons/a&amp;b.png\">", html);
+    void linksEachPageIconOnItsOwnLine() {
+        assertEquals("<meta>\n<link rel=\"icon\" href=\"icons/a&amp;b.png\">"
+                        + "\n<link rel=\"apple-touch-icon\" href=\"touch.png\">",
+                renderWithIcons(new PageIcons(Optional.of("icons/a&b.png"), Optional.of("touch.png"))));
     }
 
     @Test
-    void leavesThePageWithoutFaviconWhenThereIsNone() {
-        assertEquals("<meta>", render("<meta>{{pageFavicon}}"));
+    void linksOnlyTheIconsThatAreGiven() {
+        assertEquals("<meta>\n<link rel=\"icon\" href=\"icon.png\">",
+                renderWithIcons(new PageIcons(Optional.of("icon.png"), Optional.empty())));
+        assertEquals("<meta>\n<link rel=\"apple-touch-icon\" href=\"touch.png\">",
+                renderWithIcons(new PageIcons(Optional.empty(), Optional.of("touch.png"))));
+    }
+
+    @Test
+    void leavesThePageWithoutIconsWhenThereAreNone() {
+        assertEquals("<meta>", render("<meta>{{pageIcons}}"));
+    }
+
+    private String renderWithIcons(PageIcons pageIcons) {
+        return new PrettyHtmlRenderer(new PageTemplate("<meta>{{pageIcons}}"), "", FAKE_FAVICONS, pageIcons, FIXED_CLOCK)
+                .render(folder);
     }
 
     private String render(String template) {
-        return new PrettyHtmlRenderer(new PageTemplate(template), "", FAKE_FAVICONS, Optional.empty(), FIXED_CLOCK)
+        return new PrettyHtmlRenderer(new PageTemplate(template), "", FAKE_FAVICONS, PageIcons.none(), FIXED_CLOCK)
                 .render(folder);
     }
 }
